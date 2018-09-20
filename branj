@@ -1,0 +1,110 @@
+#!/bin/bash
+
+set -e
+
+NULOGY_CONFIG_DIR="${HOME}/.config/nulogy"
+JIRA_AUTH_STRING_FILEPATH="${NULOGY_CONFIG_DIR}/.jiratoken"
+
+first_time_setup() {
+  if [[ ! -d "${NULOGY_CONFIG_DIR}" ]]; then
+    mkdir "${NULOGY_CONFIG_DIR}"
+  fi
+
+  cat <<FIRST_TIME_SETUP_DOC
+
+================================================================================
+Running first time setup.
+
+Visit https://id.atlassian.com/manage/api-tokens to generate an API token.
+================================================================================
+
+FIRST_TIME_SETUP_DOC
+
+  echo -n "Once you have generated a token, enter it here: "
+  read JIRA_API_TOKEN
+
+  echo -n "Please enter your Nulogy email: "
+  read NULOGY_EMAIL
+
+  echo "Writing username and token to ${JIRA_AUTH_STRING_FILEPATH}"
+  echo "${NULOGY_EMAIL}:${JIRA_API_TOKEN}" > "${JIRA_AUTH_STRING_FILEPATH}"
+}
+
+checkout_branch() {
+  local TICKET_KEY="$(jq -r '.key' <(echo ${1}))"
+  local TICKET_NAME="$(jq -r '.fields.summary' <(echo ${1}) | tr '[:upper:]' '[:lower:]')"
+  git checkout -b "$(echo ${TICKET_KEY}-${TICKET_NAME} | sed -E 's/[^A-Za-z0-9]/-/g')"
+}
+
+print_unauthorized_message() {
+  cat <<UNAUTHORIZED_DOC
+
+================================================================================
+Got 401 Unauthorized from JIRA.
+
+Please make sure you have entered your Nulogy username and JIRA token correctly.
+
+Visit https://id.atlassian.com/manage/api-tokens to generate a new API token.
+================================================================================
+
+UNAUTHORIZED_DOC
+
+  echo "Removing ${JIRA_AUTH_STRING_FILEPATH}"
+  rm "${JIRA_AUTH_STRING_FILEPATH}"
+
+  exit 1
+}
+
+print_not_found_message() {
+  echo "Couldn't find ticket ${1}."
+
+  exit 1
+}
+
+generate_branch_name() {
+  local CURL_OUTPUT="$(curl -s -w '\n%{http_code}' -u "${JIRA_AUTH_STRING}" -X GET -H 'Content-Type: application/json' "https://nulogy-go.atlassian.net/rest/api/3/issue/${1}")"
+  local STATUS_CODE="${CURL_OUTPUT##*$'\n'}"
+  local JSON_RESPONSE="${CURL_OUTPUT%%$'\n'*}"
+
+  case "${STATUS_CODE}" in
+    200)
+      checkout_branch "${JSON_RESPONSE}"
+      ;;
+    401)
+      print_unauthorized_message
+      ;;
+    404)
+      print_not_found_message ${1}
+      ;;
+    *)
+      echo "Got HTTP ${STATUS_CODE}. Payload:"
+      echo "${JSON_RESPONSE}"
+      exit 1
+      ;;
+  esac
+}
+
+main() {
+  if [[ ! -e "${JIRA_AUTH_STRING_FILEPATH}" ]]; then
+    first_time_setup
+  fi
+
+  JIRA_AUTH_STRING="$(cat ${JIRA_AUTH_STRING_FILEPATH})"
+
+  generate_branch_name ${1}
+}
+
+if [[ ! $# -eq 1 ]]; then
+  cat <<USAGE_DOC
+Usage: `basename ${0}` JIRA_TICKET_NUMBER
+
+Automatically generates a branch name given a JIRA ticket number.
+
+Note that this script requires jq; run 'brew install jq' to install.
+
+USAGE_DOC
+  echo "Example: $ `basename ${0}` PM-1337"
+  exit 1
+fi
+
+main ${1}
