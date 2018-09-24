@@ -4,7 +4,7 @@ Automatically check out a git branch corresponding to the name of a given JIRA t
 
 ## Installation
 
-Copy `branj` into any folder on your `PATH`.
+Symlink `branj` into any folder on your `PATH`.
 
 For example:
 
