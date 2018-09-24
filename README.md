@@ -11,7 +11,7 @@ For example:
 ```
 mkdir ~/bin
 echo 'export PATH=~/bin:$PATH' >> ~/.zshrc
-cp ./branj ~/bin
+ln -s ./branj ~/bin/branj
 ```
 
 ## Example
