@@ -11,8 +11,10 @@ For example:
 ```
 mkdir ~/bin
 echo 'export PATH=~/bin:$PATH' >> ~/.zshrc
-ln -s ./branj ~/bin/branj
+ln -s "$(pwd)/branj" ~/bin/branj
 ```
+
+A wizard will walk you through configuration of the script the first time it is executed.
 
 ## Example
 
