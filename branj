@@ -15,7 +15,12 @@ first_time_setup() {
 ================================================================================
 Running first time setup.
 
-Visit https://id.atlassian.com/manage/api-tokens to generate an API token.
+Visit https://id.atlassian.com/manage/api-tokens to generate an API token:
+
+1) Visit https://id.atlassian.com/manage/api-tokens (you may have to login)
+2) Click "Create API Token"
+3) For a Label, enter "branj"
+4) Copy the API token to your clipboard.
 ================================================================================
 
 FIRST_TIME_SETUP_DOC
