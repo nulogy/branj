@@ -38,7 +38,18 @@ FIRST_TIME_SETUP_DOC
 checkout_branch() {
   local TICKET_KEY="$(jq -r '.key' <(echo ${1}))"
   local TICKET_NAME="$(jq -r '.fields.summary' <(echo ${1}) | tr '[:upper:]' '[:lower:]')"
-  git checkout -b "$(echo ${TICKET_KEY}-${TICKET_NAME} | sed -E 's/[^A-Za-z0-9]/-/g')"
+  local BRANCH_NAME="$(echo ${TICKET_KEY}-${TICKET_NAME} | sed -E 's/[^A-Za-z0-9]/-/g;s/-{2,}/-/g')"
+
+  set +e
+  git rev-parse --verify "${BRANCH_NAME}" &> /dev/null
+  local BRANCH_EXISTS=$?
+  set -e
+
+  if [[ "${BRANCH_EXISTS}" -eq 0 ]]; then
+    git checkout "${BRANCH_NAME}"
+  else
+    git checkout -b "${BRANCH_NAME}"
+  fi
 }
 
 print_unauthorized_message() {
