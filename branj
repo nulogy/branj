@@ -2,12 +2,12 @@
 
 set -e
 
-NULOGY_CONFIG_DIR="${HOME}/.config/nulogy"
-JIRA_AUTH_STRING_FILEPATH="${NULOGY_CONFIG_DIR}/.jiratoken"
+BRANJ_CONFIG_DIR="${HOME}/.config/branj"
+BRANJ_CONFIG_FILEPATH="${BRANJ_CONFIG_DIR}/.jiratoken"
 
 first_time_setup() {
-  if [[ ! -d "${NULOGY_CONFIG_DIR}" ]]; then
-    mkdir "${NULOGY_CONFIG_DIR}"
+  if [[ ! -d "${BRANJ_CONFIG_DIR}" ]]; then
+    mkdir "${BRANJ_CONFIG_DIR}"
   fi
 
   cat <<FIRST_TIME_SETUP_DOC
@@ -28,11 +28,14 @@ FIRST_TIME_SETUP_DOC
   echo -n "Once you have generated a token, enter it here: "
   read JIRA_API_TOKEN
 
-  echo -n "Please enter your Nulogy email: "
-  read NULOGY_EMAIL
+  echo -n "Please enter the email associated to your JIRA account: "
+  read JIRA_EMAIL
 
-  echo "Writing username and token to ${JIRA_AUTH_STRING_FILEPATH}"
-  echo "${NULOGY_EMAIL}:${JIRA_API_TOKEN}" > "${JIRA_AUTH_STRING_FILEPATH}"
+  echo -n "Please enter the URL of your JIRA installation (e.g. https://acme-corp.atlassian.net): "
+  read JIRA_URL
+
+  echo "Writing username and token to ${BRANJ_CONFIG_FILEPATH}"
+  echo -e "${JIRA_EMAIL}:${JIRA_API_TOKEN}\n${JIRA_URL}" > "${BRANJ_CONFIG_FILEPATH}"
 }
 
 checkout_branch() {
@@ -58,15 +61,15 @@ print_unauthorized_message() {
 ================================================================================
 Got 401 Unauthorized from JIRA.
 
-Please make sure you have entered your Nulogy username and JIRA token correctly.
+Please make sure you have entered your JIRA email and token correctly.
 
 Visit https://id.atlassian.com/manage/api-tokens to generate a new API token.
 ================================================================================
 
 UNAUTHORIZED_DOC
 
-  echo "Removing ${JIRA_AUTH_STRING_FILEPATH}"
-  rm "${JIRA_AUTH_STRING_FILEPATH}"
+  echo "Removing ${BRANJ_CONFIG_FILEPATH}"
+  rm "${BRANJ_CONFIG_FILEPATH}"
 
   exit 1
 }
@@ -78,7 +81,7 @@ print_not_found_message() {
 }
 
 generate_branch_name() {
-  local CURL_OUTPUT="$(curl -s -w '\n%{http_code}' -u "${JIRA_AUTH_STRING}" -X GET -H 'Content-Type: application/json' "https://nulogy-go.atlassian.net/rest/api/3/issue/${1}")"
+  local CURL_OUTPUT="$(curl -s -w '\n%{http_code}' -u "${JIRA_AUTH_STRING}" -X GET -H 'Content-Type: application/json' "${JIRA_URL}/rest/api/3/issue/${1}")"
   local STATUS_CODE="${CURL_OUTPUT##*$'\n'}"
   local JSON_RESPONSE="${CURL_OUTPUT%%$'\n'*}"
 
@@ -100,14 +103,22 @@ generate_branch_name() {
   esac
 }
 
+read_from_config() {
+  LINE_NUMBER=${1}
+  echo "$(sed -n ${LINE_NUMBER}p ${BRANJ_CONFIG_FILEPATH})"
+}
+
 main() {
-  if [[ ! -e "${JIRA_AUTH_STRING_FILEPATH}" ]]; then
+  JIRA_TICKET_NUMBER="${1}"
+  
+  if [[ ! -e "${BRANJ_CONFIG_FILEPATH}" ]]; then
     first_time_setup
   fi
 
-  JIRA_AUTH_STRING="$(cat ${JIRA_AUTH_STRING_FILEPATH})"
+  JIRA_AUTH_STRING=$(read_from_config 1)
+  JIRA_URL=$(read_from_config 2)
 
-  generate_branch_name ${1}
+  generate_branch_name "${JIRA_TICKET_NUMBER}"
 }
 
 if [[ ! $# -eq 1 ]]; then
