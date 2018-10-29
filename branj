@@ -31,6 +31,9 @@ FIRST_TIME_SETUP_DOC
   echo -n "Please enter the email associated to your JIRA account: "
   read JIRA_EMAIL
 
+  echo -n "Please enter the URL of your JIRA installation: "
+  read JIRA_URL
+
   echo "Writing username and token to ${JIRA_AUTH_STRING_FILEPATH}"
   echo "${JIRA_EMAIL}:${JIRA_API_TOKEN}" > "${JIRA_AUTH_STRING_FILEPATH}"
 }
@@ -78,7 +81,7 @@ print_not_found_message() {
 }
 
 generate_branch_name() {
-  local CURL_OUTPUT="$(curl -s -w '\n%{http_code}' -u "${JIRA_AUTH_STRING}" -X GET -H 'Content-Type: application/json' "https://nulogy-go.atlassian.net/rest/api/3/issue/${1}")"
+  local CURL_OUTPUT="$(curl -s -w '\n%{http_code}' -u "${JIRA_AUTH_STRING}" -X GET -H 'Content-Type: application/json' "${JIRA_URL}/rest/api/3/issue/${1}")"
   local STATUS_CODE="${CURL_OUTPUT##*$'\n'}"
   local JSON_RESPONSE="${CURL_OUTPUT%%$'\n'*}"
 
