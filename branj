@@ -35,7 +35,7 @@ FIRST_TIME_SETUP_DOC
   read JIRA_URL
 
   echo "Writing username and token to ${JIRA_AUTH_STRING_FILEPATH}"
-  echo "${JIRA_EMAIL}:${JIRA_API_TOKEN}" > "${JIRA_AUTH_STRING_FILEPATH}"
+  echo -e "${JIRA_EMAIL}:${JIRA_API_TOKEN}\n${JIRA_URL}" > "${JIRA_AUTH_STRING_FILEPATH}"
 }
 
 checkout_branch() {
@@ -103,14 +103,22 @@ generate_branch_name() {
   esac
 }
 
+read_from_config() {
+  LINE_NUMBER=${1}
+  echo "$(sed -n ${LINE_NUMBER}p ${JIRA_AUTH_STRING_FILEPATH})"
+}
+
 main() {
+  JIRA_TICKET_NUMBER="${1}"
+  
   if [[ ! -e "${JIRA_AUTH_STRING_FILEPATH}" ]]; then
     first_time_setup
   fi
 
-  JIRA_AUTH_STRING="$(cat ${JIRA_AUTH_STRING_FILEPATH})"
+  JIRA_AUTH_STRING=$(read_from_config 1)
+  JIRA_URL=$(read_from_config 2)
 
-  generate_branch_name ${1}
+  generate_branch_name "${JIRA_TICKET_NUMBER}"
 }
 
 if [[ ! $# -eq 1 ]]; then
