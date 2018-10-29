@@ -31,7 +31,7 @@ FIRST_TIME_SETUP_DOC
   echo -n "Please enter the email associated to your JIRA account: "
   read JIRA_EMAIL
 
-  echo -n "Please enter the URL of your JIRA installation: "
+  echo -n "Please enter the URL of your JIRA installation (e.g. https://acme-corp.atlassian.net): "
   read JIRA_URL
 
   echo "Writing username and token to ${BRANJ_CONFIG_FILEPATH}"
