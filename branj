@@ -3,7 +3,7 @@
 set -e
 
 BRANJ_CONFIG_DIR="${HOME}/.config/branj"
-JIRA_AUTH_STRING_FILEPATH="${BRANJ_CONFIG_DIR}/.jiratoken"
+BRANJ_CONFIG_FILEPATH="${BRANJ_CONFIG_DIR}/.jiratoken"
 
 first_time_setup() {
   if [[ ! -d "${BRANJ_CONFIG_DIR}" ]]; then
@@ -34,8 +34,8 @@ FIRST_TIME_SETUP_DOC
   echo -n "Please enter the URL of your JIRA installation: "
   read JIRA_URL
 
-  echo "Writing username and token to ${JIRA_AUTH_STRING_FILEPATH}"
-  echo -e "${JIRA_EMAIL}:${JIRA_API_TOKEN}\n${JIRA_URL}" > "${JIRA_AUTH_STRING_FILEPATH}"
+  echo "Writing username and token to ${BRANJ_CONFIG_FILEPATH}"
+  echo -e "${JIRA_EMAIL}:${JIRA_API_TOKEN}\n${JIRA_URL}" > "${BRANJ_CONFIG_FILEPATH}"
 }
 
 checkout_branch() {
@@ -68,8 +68,8 @@ Visit https://id.atlassian.com/manage/api-tokens to generate a new API token.
 
 UNAUTHORIZED_DOC
 
-  echo "Removing ${JIRA_AUTH_STRING_FILEPATH}"
-  rm "${JIRA_AUTH_STRING_FILEPATH}"
+  echo "Removing ${BRANJ_CONFIG_FILEPATH}"
+  rm "${BRANJ_CONFIG_FILEPATH}"
 
   exit 1
 }
@@ -105,13 +105,13 @@ generate_branch_name() {
 
 read_from_config() {
   LINE_NUMBER=${1}
-  echo "$(sed -n ${LINE_NUMBER}p ${JIRA_AUTH_STRING_FILEPATH})"
+  echo "$(sed -n ${LINE_NUMBER}p ${BRANJ_CONFIG_FILEPATH})"
 }
 
 main() {
   JIRA_TICKET_NUMBER="${1}"
   
-  if [[ ! -e "${JIRA_AUTH_STRING_FILEPATH}" ]]; then
+  if [[ ! -e "${BRANJ_CONFIG_FILEPATH}" ]]; then
     first_time_setup
   fi
 
