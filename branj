@@ -5,6 +5,18 @@ set -e
 BRANJ_CONFIG_DIR="${HOME}/.config/branj"
 BRANJ_CONFIG_FILEPATH="${BRANJ_CONFIG_DIR}/.jiratoken"
 
+print_usage_doc() {
+  cat <<USAGE_DOC
+Usage: `basename ${0}` [-s BRANCH_SUFFIX] JIRA_TICKET_NUMBER
+
+Automatically generates a branch name given a JIRA ticket number.
+
+Note that this script requires jq; run 'brew install jq' to install.
+
+USAGE_DOC
+  echo "Example: $ `basename ${0}` PM-1337"
+}
+
 first_time_setup() {
   if [[ ! -d "${BRANJ_CONFIG_DIR}" ]]; then
     mkdir "${BRANJ_CONFIG_DIR}"
@@ -38,10 +50,21 @@ FIRST_TIME_SETUP_DOC
   echo -e "${JIRA_EMAIL}:${JIRA_API_TOKEN}\n${JIRA_URL}" > "${BRANJ_CONFIG_FILEPATH}"
 }
 
-checkout_branch() {
+generate_branch_name() {
   local TICKET_KEY="$(jq -r '.key' <(echo ${1}))"
   local TICKET_NAME="$(jq -r '.fields.summary' <(echo ${1}) | tr '[:upper:]' '[:lower:]')"
   local BRANCH_NAME="$(echo ${TICKET_KEY}-${TICKET_NAME} | sed -E 's/[^A-Za-z0-9]/-/g;s/-{2,}/-/g')"
+
+  if [[ -z "${BRANCH_SUFFIX}" ]]; then
+    echo "${BRANCH_NAME}"
+  else
+    echo "${BRANCH_NAME}-${BRANCH_SUFFIX}"
+  fi
+}
+
+checkout_branch() {
+  local JIRA_RESPONSE="${1}"
+  local BRANCH_NAME=$(generate_branch_name "${JIRA_RESPONSE}")
 
   set +e
   git rev-parse --verify "${BRANCH_NAME}" &> /dev/null
@@ -80,7 +103,7 @@ print_not_found_message() {
   exit 1
 }
 
-generate_branch_name() {
+get_branch_name_from_jira() {
   local CURL_OUTPUT="$(curl -s -w '\n%{http_code}' -u "${JIRA_AUTH_STRING}" -X GET -H 'Content-Type: application/json' "${JIRA_URL}/rest/api/3/issue/${1}")"
   local STATUS_CODE="${CURL_OUTPUT##*$'\n'}"
   local JSON_RESPONSE="${CURL_OUTPUT%%$'\n'*}"
@@ -104,12 +127,45 @@ generate_branch_name() {
 }
 
 read_from_config() {
-  LINE_NUMBER=${1}
+  local LINE_NUMBER="${1}"
   echo "$(sed -n ${LINE_NUMBER}p ${BRANJ_CONFIG_FILEPATH})"
 }
 
+parse_args() {
+  if [[ $# -lt 1 ]]; then
+    print_usage_doc
+    exit 1
+  fi
+
+  # Extract leading non-option arguments, since getopts will immediately
+  # stop processing at the first non-option argument.
+  case "${1}" in
+    -*) ;;
+    *) JIRA_TICKET_NUMBER="${1}"; shift;;
+  esac
+
+  while getopts "s:" OPTION; do
+    case $OPTION in
+      s)
+        BRANCH_SUFFIX="${OPTARG}"
+        ;;
+      \?)
+        echo "Invalid option: -${OPTARG}" >&2
+        exit 1
+        ;;
+      :)
+        echo "Option -${OPTARG} requires an argument." >&2
+        exit 1
+        ;;
+    esac
+  done
+
+  # Set the ticket number in the event of a trailing non-option argument.
+  JIRA_TICKET_NUMBER="${JIRA_TICKET_NUMBER:-${@:$OPTIND:1}}"
+}
+
 main() {
-  JIRA_TICKET_NUMBER="${1}"
+  parse_args "$@"
   
   if [[ ! -e "${BRANJ_CONFIG_FILEPATH}" ]]; then
     first_time_setup
@@ -118,20 +174,7 @@ main() {
   JIRA_AUTH_STRING=$(read_from_config 1)
   JIRA_URL=$(read_from_config 2)
 
-  generate_branch_name "${JIRA_TICKET_NUMBER}"
+  get_branch_name_from_jira "${JIRA_TICKET_NUMBER}"
 }
 
-if [[ ! $# -eq 1 ]]; then
-  cat <<USAGE_DOC
-Usage: `basename ${0}` JIRA_TICKET_NUMBER
-
-Automatically generates a branch name given a JIRA ticket number.
-
-Note that this script requires jq; run 'brew install jq' to install.
-
-USAGE_DOC
-  echo "Example: $ `basename ${0}` PM-1337"
-  exit 1
-fi
-
-main ${1}
+main "$@"
