@@ -4,6 +4,16 @@ Automatically check out a git branch corresponding to the name of a given JIRA t
 
 ## Installation
 
+### From Homebrew Cask
+
+Install directly from this repository's cask file:
+
+```
+brew cask install https://raw.githubusercontent.com/nulogy/branj/master/branj.rb
+```
+
+### Manually
+
 Symlink `branj` into any folder on your `PATH`.
 
 For example:
@@ -14,12 +24,22 @@ echo 'export PATH=~/bin:$PATH' >> ~/.zshrc
 ln -s "$(pwd)/branj" ~/bin/branj
 ```
 
+## Usage
+
 A wizard will walk you through configuration of the script the first time it is executed.
+
+### Options
+
+* `-s`: Add a suffix to the created branch. Example:
+    ```
+    $ branj -s part-two FOO-1337
+    Switched to a new branch 'FOO-1337-fix-broken-things-part-two'
+    ```
 
 ## Example
 
 ```
-cd ~/src/foo_project
-branj FOO-1337
+$ cd ~/src/foo_project
+$ branj FOO-1337
 Switched to a new branch 'FOO-1337-fix-broken-things'
 ```
