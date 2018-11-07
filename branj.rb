@@ -6,5 +6,5 @@ cask 'branj' do
   name 'branj'
   homepage 'https://github.com/nulogy/branj'
 
-  binary 'branj'
+  binary 'branj-1.0.0/branj'
 end
