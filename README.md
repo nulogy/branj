@@ -19,10 +19,7 @@ A wizard will walk you through configuration of the script the first time it is 
 ## Example
 
 ```
-~/src/packmanager/master master
-❯ branj PM-1337
-Switched to a new branch 'PM-1337-fix-broken-search-in-rails-4-2'
-
-~/src/packmanager/master PM-1337-fix-broken-search-in-rails-4-2
-❯
+cd ~/src/foo_project
+branj FOO-1337
+Switched to a new branch 'FOO-1337-fix-broken-things'
 ```
