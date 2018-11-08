@@ -1,6 +1,6 @@
 cask 'branj' do
   version '1.0.1'
-  sha256 '2720d2fa3b0cc904a003cdfea5b169a13e424e51501d2dee72397e5a3dd05fab'
+  sha256 'f1a7f689404489e2fb03e2848bdfbd78d02d4268a51406350185afbcfdf6a4d9'
 
   url 'https://github.com/nulogy/branj/archive/1.0.1.zip'
   name 'branj'
