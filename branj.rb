@@ -6,5 +6,9 @@ cask 'branj' do
   name 'branj'
   homepage 'https://github.com/nulogy/branj'
 
+  depends_on formula: 'curl'
+  depends_on formula: 'git'
+  depends_on formula: 'jq'
+
   binary 'branj-1.0.0/branj'
 end
