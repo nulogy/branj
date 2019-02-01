@@ -26,6 +26,10 @@ $ ln -s "$(pwd)/branj" ~/bin/branj
 
 ## Usage
 
+```shell
+$ branj <jira-ticket-number> [<base-branch>]
+```
+
 A wizard will walk you through configuration of the script the first time it is executed.
 
 ### Options

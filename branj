@@ -7,7 +7,7 @@ BRANJ_CONFIG_FILEPATH="${BRANJ_CONFIG_DIR}/.jiratoken"
 
 print_usage_doc() {
   cat <<USAGE_DOC
-Usage: `basename ${0}` [-s BRANCH_SUFFIX] JIRA_TICKET_NUMBER
+Usage: `basename ${0}` [-s BRANCH_SUFFIX] JIRA_TICKET_NUMBER [BASE_BRANCH]
 
 Automatically generates a branch name given a JIRA ticket number.
 
@@ -73,8 +73,9 @@ checkout_branch() {
 
   if [[ "${BRANCH_EXISTS}" -eq 0 ]]; then
     git checkout "${BRANCH_NAME}"
+    [[ ! -z "${BASE_BRANCH}" ]] && echo "Ignored base branch '${BASE_BRANCH}' since '${BRANCH_NAME}' already exists"
   else
-    git checkout -b "${BRANCH_NAME}"
+    git checkout -b "${BRANCH_NAME}" ${BASE_BRANCH:+ "${BASE_BRANCH}"}
   fi
 }
 
@@ -173,6 +174,7 @@ main() {
 
   JIRA_AUTH_STRING=$(read_from_config 1)
   JIRA_URL=$(read_from_config 2)
+  BASE_BRANCH="${2}"
 
   get_branch_name_from_jira "${JIRA_TICKET_NUMBER}"
 }
