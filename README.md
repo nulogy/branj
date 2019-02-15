@@ -4,12 +4,14 @@ Automatically check out a git branch corresponding to the name of a given JIRA t
 
 ## Installation
 
-### From Homebrew Cask
+### From Nulogy Homebrew Tap
 
-Install directly from this repository's cask file:
+If you have access to Nulogy's private homebrew tap, you can install branj
+directly through Homebrew:
 
 ```shell
-$ brew cask install https://raw.githubusercontent.com/nulogy/branj/master/branj.rb
+$ brew tap nulogy/homebrew-nulogy git@github.com:nulogy/homebrew-nulogy.git
+$ brew install nulogy/nulogy/branj
 ```
 
 ### Manually
