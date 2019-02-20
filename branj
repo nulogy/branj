@@ -138,12 +138,17 @@ parse_args() {
     exit 1
   fi
 
+  local NON_OPTION_ARGS=()
+
   # Extract leading non-option arguments, since getopts will immediately
   # stop processing at the first non-option argument.
-  case "${1}" in
-    -*) ;;
-    *) JIRA_TICKET_NUMBER="${1}"; shift;;
-  esac
+  while [[ -n "${1}" ]] && [[ "${1:0:1}" != "-" ]]; do
+    NON_OPTION_ARGS+=("${1}")
+    shift
+  done
+
+  JIRA_TICKET_NUMBER="${NON_OPTION_ARGS[0]}"
+  BASE_BRANCH="${NON_OPTION_ARGS[1]}"
 
   while getopts "s:" OPTION; do
     case $OPTION in
@@ -161,8 +166,10 @@ parse_args() {
     esac
   done
 
-  # Set the ticket number in the event of a trailing non-option argument.
-  JIRA_TICKET_NUMBER="${JIRA_TICKET_NUMBER:-${@:$OPTIND:1}}"
+  # Set non-option arguments if they come after option arguments
+  shift "$((OPTIND-1))"
+  JIRA_TICKET_NUMBER="${JIRA_TICKET_NUMBER:-${1}}"
+  BASE_BRANCH="${BASE_BRANCH:-${2}}"
 }
 
 main() {
@@ -174,7 +181,6 @@ main() {
 
   JIRA_AUTH_STRING=$(read_from_config 1)
   JIRA_URL=$(read_from_config 2)
-  BASE_BRANCH="${2}"
 
   get_branch_name_from_jira "${JIRA_TICKET_NUMBER}"
 }
