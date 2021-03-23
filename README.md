@@ -16,6 +16,7 @@ $ brew install nulogy/nulogy/branj
 
 ### Manually
 
+You can also install `branj` manually by running the following steps
 Symlink `branj` into any folder on your `PATH`.
 
 For example:
