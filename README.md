@@ -42,6 +42,10 @@ A wizard will walk you through configuration of the script the first time it is 
     $ branj -s part-two FOO-1337
     Switched to a new branch 'FOO-1337-fix-broken-things-part-two'
     ```
+* `-m`: Rename the current branch instead of creating a new one. Example:
+    ```shell
+    $ branj -m FOO-1337
+    ```
 
 ## Example
 

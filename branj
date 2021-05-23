@@ -7,9 +7,13 @@ BRANJ_CONFIG_FILEPATH="${BRANJ_CONFIG_DIR}/.jiratoken"
 
 print_usage_doc() {
   cat <<USAGE_DOC
-Usage: `basename ${0}` [-s BRANCH_SUFFIX] JIRA_TICKET_NUMBER [BASE_BRANCH]
+Usage: `basename ${0}`[-m] [-s BRANCH_SUFFIX] JIRA_TICKET_NUMBER [BASE_BRANCH]
 
 Automatically generates a branch name given a JIRA ticket number.
+
+Command line options:
+-m: rename the current branch instead of creating a new one (does not rename it upstream)
+-s BRANCH_SUFFIX: Add a suffix to the end of the created branch name
 
 Note that this script requires jq; run 'brew install jq' to install.
 
@@ -74,6 +78,8 @@ checkout_branch() {
   if [[ "${BRANCH_EXISTS}" -eq 0 ]]; then
     git checkout "${BRANCH_NAME}"
     [[ ! -z "${BASE_BRANCH}" ]] && echo "Ignored base branch '${BASE_BRANCH}' since '${BRANCH_NAME}' already exists"
+  elif [[ "${RENAME_BRANCH}" -eq "true" ]]; then
+    git branch -m "${BRANCH_NAME}"
   else
     git checkout -b "${BRANCH_NAME}" ${BASE_BRANCH:+ "${BASE_BRANCH}"}
   fi
@@ -150,10 +156,13 @@ parse_args() {
   JIRA_TICKET_NUMBER="${NON_OPTION_ARGS[0]}"
   BASE_BRANCH="${NON_OPTION_ARGS[1]}"
 
-  while getopts "s:" OPTION; do
+  while getopts "ms:" OPTION; do
     case $OPTION in
       s)
         BRANCH_SUFFIX="${OPTARG}"
+        ;;
+      m)
+        RENAME_BRANCH="true"
         ;;
       \?)
         echo "Invalid option: -${OPTARG}" >&2
