@@ -46,6 +46,11 @@ A wizard will walk you through configuration of the script the first time it is 
     ```shell
     $ branj -m FOO-1337
     ```
+* `-n`: Output the branch name only, without checking out or creating a branch. Example:
+    ```shell
+    $ branj -n FOO-1337
+    FOO-1337-fix-broken-things
+    ```
 
 ## Example
 
