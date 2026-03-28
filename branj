@@ -78,7 +78,9 @@ checkout_branch() {
 
   if [[ "${BRANCH_EXISTS}" -eq 0 ]]; then
     git checkout "${BRANCH_NAME}"
-    [[ ! -z "${BASE_BRANCH}" ]] && echo "Ignored base branch '${BASE_BRANCH}' since '${BRANCH_NAME}' already exists"
+    if [[ -n "${BASE_BRANCH}" ]]; then
+      echo "Ignored base branch '${BASE_BRANCH}' since '${BRANCH_NAME}' already exists"
+    fi
   elif [[ "${RENAME_BRANCH}" ==  "true" ]]; then
     git branch -m "${BRANCH_NAME}"
   else
