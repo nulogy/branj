@@ -88,53 +88,118 @@ checkout_branch() {
   fi
 }
 
-print_unauthorized_message() {
-  cat <<UNAUTHORIZED_DOC
+print_invalid_token_banner() {
+  cat >&2 <<INVALID_TOKEN_BANNER
 
 ================================================================================
-Got 401 Unauthorized from JIRA.
+branj: your JIRA API token is no longer valid.
 
-Please make sure you have entered your JIRA email and token correctly.
+Atlassian tokens expire after at most one year and may also be revoked
+manually. Create a new token at:
 
-Visit https://id.atlassian.com/manage/api-tokens to generate a new API token.
+  https://id.atlassian.com/manage/api-tokens
+
+We'll re-run first-time setup now and then retry your ticket fetch.
 ================================================================================
 
-UNAUTHORIZED_DOC
-
-  echo "Removing ${BRANJ_CONFIG_FILEPATH}"
-  rm "${BRANJ_CONFIG_FILEPATH}"
-
-  exit 1
+INVALID_TOKEN_BANNER
 }
 
 print_not_found_message() {
-  echo "Couldn't find ticket ${1}."
+  echo "Couldn't find ticket ${1}." >&2
 
   exit 1
 }
 
-get_branch_name_from_jira() {
-  local CURL_OUTPUT="$(curl -s -w '\n%{http_code}' -u "${JIRA_AUTH_STRING}" -X GET -H 'Content-Type: application/json' "${JIRA_URL}/rest/api/3/issue/${1}")"
-  local STATUS_CODE="${CURL_OUTPUT##*$'\n'}"
-  local JSON_RESPONSE="${CURL_OUTPUT%%$'\n'*}"
+# Issue a GET against the JIRA REST API. Populates JIRA_STATUS_CODE and
+# JIRA_JSON_RESPONSE in the global scope.
+jira_request() {
+  local ENDPOINT="${1}"
+  local CURL_OUTPUT
+  CURL_OUTPUT="$(curl -s -w '\n%{http_code}' -u "${JIRA_AUTH_STRING}" -X GET -H 'Content-Type: application/json' "${JIRA_URL}/${ENDPOINT}")"
+  JIRA_STATUS_CODE="${CURL_OUTPUT##*$'\n'}"
+  JIRA_JSON_RESPONSE="${CURL_OUTPUT%%$'\n'*}"
+}
 
-  case "${STATUS_CODE}" in
+# JIRA's /issue/{key} endpoint returns 404 for both "ticket doesn't exist"
+# AND "your token is bad" (a deliberate Atlassian choice to not leak ticket
+# existence). Probe /myself to tell the two apart: 200 means the token works.
+token_is_valid() {
+  jira_request "rest/api/3/myself"
+  [[ "${JIRA_STATUS_CODE}" == "200" ]]
+}
+
+# Drop the saved credentials, re-run first-time setup interactively, and
+# reload the new values. Called when we've detected the token is bad.
+reset_credentials() {
+  print_invalid_token_banner
+  rm "${BRANJ_CONFIG_FILEPATH}"
+  first_time_setup
+  JIRA_AUTH_STRING=$(read_from_config 1)
+  JIRA_URL=$(read_from_config 2)
+}
+
+# If we haven't tried recovering yet this run, reset credentials and retry
+# the original ticket fetch. Otherwise the new token is also bad — give up
+# rather than loop forever.
+recover_or_die() {
+  local TICKET="${1}"
+  local ALREADY_RESET="${2}"
+
+  if [[ "${ALREADY_RESET}" == "true" ]]; then
+    cat >&2 <<STILL_BAD
+
+================================================================================
+branj: still can't authenticate after entering a new token.
+
+Check that the JIRA email, token, and URL in
+  ${BRANJ_CONFIG_FILEPATH}
+are correct, or remove that file and try again.
+================================================================================
+
+STILL_BAD
+    exit 1
+  fi
+
+  reset_credentials
+  get_branch_name_from_jira "${TICKET}" "true"
+}
+
+get_branch_name_from_jira() {
+  local TICKET="${1}"
+  local ALREADY_RESET="${2:-false}"
+
+  jira_request "rest/api/3/issue/${TICKET}"
+
+  case "${JIRA_STATUS_CODE}" in
     200)
-      if [[ "${NAME_ONLY}" == "true" ]]; then
-        generate_branch_name "${JSON_RESPONSE}"
+      local TICKET_KEY
+      TICKET_KEY="$(jq -r '.key // empty' <<<"${JIRA_JSON_RESPONSE}" 2>/dev/null || echo "")"
+      if [[ -z "${TICKET_KEY}" ]]; then
+        recover_or_die "${TICKET}" "${ALREADY_RESET}"
+      elif [[ "${NAME_ONLY}" == "true" ]]; then
+        generate_branch_name "${JIRA_JSON_RESPONSE}"
       else
-        checkout_branch "${JSON_RESPONSE}"
+        checkout_branch "${JIRA_JSON_RESPONSE}"
       fi
       ;;
-    401)
-      print_unauthorized_message
+    401|403)
+      recover_or_die "${TICKET}" "${ALREADY_RESET}"
       ;;
     404)
-      print_not_found_message ${1}
+      if token_is_valid; then
+        print_not_found_message "${TICKET}"
+      else
+        recover_or_die "${TICKET}" "${ALREADY_RESET}"
+      fi
+      ;;
+    "")
+      echo "branj: no HTTP response from JIRA. Check your network connection and JIRA URL." >&2
+      exit 1
       ;;
     *)
-      echo "Got HTTP ${STATUS_CODE}. Payload:"
-      echo "${JSON_RESPONSE}"
+      echo "Got HTTP ${JIRA_STATUS_CODE}. Payload:" >&2
+      echo "${JIRA_JSON_RESPONSE}" >&2
       exit 1
       ;;
   esac
